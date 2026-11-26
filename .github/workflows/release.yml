@@ -1,0 +1,31 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build and test
+        shell: cmd
+        run: test.bat
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $hash = (Get-FileHash -Path "bin\LazyClean.exe" -Algorithm SHA256).Hash.ToLower()
+          "$hash  LazyClean.exe" | Out-File -FilePath "bin\SHA256SUMS.txt" -Encoding ascii
+          gh release create $tag bin\LazyClean.exe bin\SHA256SUMS.txt --title "lazy clean $tag" --generate-notes

@@ -1,0 +1,26 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+*.exe
+*.dll
+*.pdb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Test outputs & screenshots
+tests-*.txt
+*.png
+*.log
+*.tmp
+
+# Visual Studio & VS Code
+.vs/
+.vscode/
+.idea/
+
+# Operating System
+[Tt]humbs.db
+[Dd]esktop.ini
+.DS_Store

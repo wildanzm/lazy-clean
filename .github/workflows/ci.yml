@@ -1,0 +1,23 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build application
+        shell: cmd
+        run: build.bat
+
+      - name: Run unit and UI smoke tests
+        shell: cmd
+        run: test.bat
