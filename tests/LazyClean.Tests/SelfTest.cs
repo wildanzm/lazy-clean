@@ -193,6 +193,7 @@ namespace Cleaner
                 Check(res2.Deleted == 0 && res2.Failed == 1, "path dilindungi ditolak");
 
                 Check(Targets.IsProtected(@"C:\"), "drive root C:\\ dilindungi");
+                Check(Targets.IsProtected(@"C:"), "drive root C: dilindungi");
                 Check(Targets.IsProtected(@"D:"), "drive root D: dilindungi");
                 Check(Targets.IsProtected(@"D:\$Recycle.Bin"), "Recycle bin drive lain dilindungi");
                 Check(Targets.IsProtected(@"E:\System Volume Information\test"), "System Volume Info drive lain dilindungi");

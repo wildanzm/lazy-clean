@@ -28,4 +28,9 @@ jobs:
           $tag = "${{ github.ref_name }}"
           $hash = (Get-FileHash -Path "bin\LazyClean.exe" -Algorithm SHA256).Hash.ToLower()
           "$hash  LazyClean.exe" | Out-File -FilePath "bin\SHA256SUMS.txt" -Encoding ascii
-          gh release create $tag bin\LazyClean.exe bin\SHA256SUMS.txt --title "lazy clean $tag" --generate-notes
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag bin\LazyClean.exe bin\SHA256SUMS.txt --clobber
+          } else {
+            gh release create $tag bin\LazyClean.exe bin\SHA256SUMS.txt --title "lazy clean $tag" --generate-notes
+          }

@@ -106,6 +106,8 @@ namespace Cleaner
             string p = path.Trim();
             if (p.StartsWith(@"\\?\", StringComparison.OrdinalIgnoreCase))
                 p = p.Substring(4);
+            if (p.Length == 2 && char.IsLetter(p[0]) && p[1] == ':')
+                return p;
             try
             {
                 p = Path.GetFullPath(p);
