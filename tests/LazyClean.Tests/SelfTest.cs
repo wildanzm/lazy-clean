@@ -135,12 +135,12 @@ namespace Cleaner
                 Category emptyCat = Find(cats, "Empty folders");
                 Category largeCat = Find(cats, "Large files");
 
-                Check(dup != null && dup.Items.Count == 2, "duplikat terdeteksi (2 file)");
-                Check(dup != null && dup.Items.Count(delegate(ScanItem i) { return i.Keep; }) == 1, "satu salinan duplikat disimpan");
-                Check(junkCat != null && junkCat.Items.Any(delegate(ScanItem i) { return i.Path == junk; }), "junk .tmp terdeteksi");
-                Check(junkCat != null && junkCat.Items.Any(delegate(ScanItem i) { return i.Path == deepJunk; }), "junk .tmp nested terdeteksi");
-                Check(emptyCat != null && emptyCat.Items.Any(delegate(ScanItem i) { return i.Path == empty; }), "folder kosong terdeteksi");
-                Check(largeCat != null && largeCat.Items.Any(delegate(ScanItem i) { return i.Path == a; }), "file besar terdeteksi");
+                Check(dup != null && dup.Items.Count == 2, "duplicates detected (2 files)");
+                Check(dup != null && dup.Items.Count(delegate(ScanItem i) { return i.Keep; }) == 1, "one duplicate copy kept");
+                Check(junkCat != null && junkCat.Items.Any(delegate(ScanItem i) { return i.Path == junk; }), "junk .tmp detected");
+                Check(junkCat != null && junkCat.Items.Any(delegate(ScanItem i) { return i.Path == deepJunk; }), "nested junk .tmp detected");
+                Check(emptyCat != null && emptyCat.Items.Any(delegate(ScanItem i) { return i.Path == empty; }), "empty folder detected");
+                Check(largeCat != null && largeCat.Items.Any(delegate(ScanItem i) { return i.Path == a; }), "large file detected");
 
                 // The regression this suite exists for: a deep scan must never offer an installed
                 // program's own files, its updater backups, or a profile database as deletable junk.
@@ -151,12 +151,12 @@ namespace Cleaner
                             if (string.Equals(cats[i].Items[j].Path, p, StringComparison.OrdinalIgnoreCase)) return true;
                     return false;
                 };
-                Check(!flagged(liveExe), "chrome.exe di folder versi tidak ditandai");
-                Check(!flagged(liveDll), "chrome.dll tidak ditandai");
-                Check(!flagged(backupExe), "cadangan .bak-<versi> tidak ditandai");
-                Check(!flagged(oldExe), "chrome.exe.old tidak ditandai");
-                Check(!flagged(leveldbLog), "database leveldb .log tidak ditandai");
-                Check(!flagged(looseLog), "file .log aplikasi tidak ditandai");
+                Check(!flagged(liveExe), "chrome.exe in version folder not flagged");
+                Check(!flagged(liveDll), "chrome.dll not flagged");
+                Check(!flagged(backupExe), "updater .bak-<version> backup not flagged");
+                Check(!flagged(oldExe), "chrome.exe.old not flagged");
+                Check(!flagged(leveldbLog), "leveldb .log database not flagged");
+                Check(!flagged(looseLog), "application .log file not flagged");
 
                 var toDelete = new List<ScanItem>();
                 for (int i = 0; i < cats.Count; i++)
@@ -169,11 +169,11 @@ namespace Cleaner
                 }
 
                 DeleteResult res = ScanEngine.Delete(toDelete, true, null, CancellationToken.None);
-                Check(res.Failed == 0, "hapus permanen tanpa kegagalan (failed=" + res.Failed + ")");
-                Check(!File.Exists(junk), "junk.tmp terhapus");
-                Check(!File.Exists(deepJunk), "old.tmp nested terhapus");
-                Check(!Directory.Exists(empty), "folder kosong terhapus");
-                Check(File.Exists(liveExe) && File.Exists(liveDll), "biner aplikasi masih utuh setelah delete");
+                Check(res.Failed == 0, "permanent delete completes with zero failures (failed=" + res.Failed + ")");
+                Check(!File.Exists(junk), "junk.tmp deleted");
+                Check(!File.Exists(deepJunk), "nested old.tmp deleted");
+                Check(!Directory.Exists(empty), "empty folder deleted");
+                Check(File.Exists(liveExe) && File.Exists(liveDll), "application binaries intact after delete");
 
                 // Second layer: even if a stale selection names a program file, delete must refuse it.
                 DeleteResult guard = ScanEngine.Delete(new List<ScanItem>
@@ -181,24 +181,24 @@ namespace Cleaner
                     new ScanItem { Path = liveExe, Size = 2 },
                     new ScanItem { Path = backupExe, Size = 2 }
                 }, true, null, CancellationToken.None);
-                Check(guard.Deleted == 0 && guard.Failed == 2, "delete menolak file milik aplikasi");
-                Check(File.Exists(liveExe) && File.Exists(backupExe), "file aplikasi tidak terhapus paksa");
+                Check(guard.Deleted == 0 && guard.Failed == 2, "delete refuses app-owned files");
+                Check(File.Exists(liveExe) && File.Exists(backupExe), "app-owned files protected from forced delete");
 
                 int remain = (File.Exists(a) ? 1 : 0) + (File.Exists(b) ? 1 : 0);
-                Check(remain == 1, "tepat satu salinan duplikat tersisa (sisa=" + remain + ")");
+                Check(remain == 1, "exactly one duplicate copy remains (remaining=" + remain + ")");
 
                 DeleteResult res2 = ScanEngine.Delete(
                     new List<ScanItem> { new ScanItem { Path = @"C:\Windows\System32\drivers\etc\hosts", Size = 1 } },
                     true, null, CancellationToken.None);
-                Check(res2.Deleted == 0 && res2.Failed == 1, "path dilindungi ditolak");
+                Check(res2.Deleted == 0 && res2.Failed == 1, "protected system path rejected");
 
-                Check(Targets.IsProtected(@"C:\"), "drive root C:\\ dilindungi");
-                Check(Targets.IsProtected(@"C:"), "drive root C: dilindungi");
-                Check(Targets.IsProtected(@"D:"), "drive root D: dilindungi");
-                Check(Targets.IsProtected(@"D:\$Recycle.Bin"), "Recycle bin drive lain dilindungi");
-                Check(Targets.IsProtected(@"E:\System Volume Information\test"), "System Volume Info drive lain dilindungi");
-                Check(Targets.IsProtected(@"\\?\C:\Windows\System32\calc.exe"), "prefix long path dilindungi");
-                Check(Targets.IsProtected(@"C:\Windows\System32\..\System32\calc.exe"), "traversal path dilindungi");
+                Check(Targets.IsProtected(@"C:\"), "drive root C:\\ protected");
+                Check(Targets.IsProtected(@"C:"), "drive root C: protected");
+                Check(Targets.IsProtected(@"D:"), "drive root D: protected");
+                Check(Targets.IsProtected(@"D:\$Recycle.Bin"), "secondary drive Recycle Bin protected");
+                Check(Targets.IsProtected(@"E:\System Volume Information\test"), "secondary drive System Volume Information protected");
+                Check(Targets.IsProtected(@"\\?\C:\Windows\System32\calc.exe"), "long-path prefix protected");
+                Check(Targets.IsProtected(@"C:\Windows\System32\..\System32\calc.exe"), "path traversal protected");
 
                 string notEmptyDir = Path.Combine(dir, "not-empty-dir");
                 Directory.CreateDirectory(notEmptyDir);
@@ -206,7 +206,7 @@ namespace Cleaner
                 DeleteResult nonEmpRes = ScanEngine.Delete(
                     new List<ScanItem> { new ScanItem { Path = notEmptyDir, IsDir = true, Size = 0 } },
                     true, null, CancellationToken.None);
-                Check(nonEmpRes.Deleted == 0 && nonEmpRes.Failed == 1 && Directory.Exists(notEmptyDir), "direktori tidak kosong ditolak saat delete");
+                Check(nonEmpRes.Deleted == 0 && nonEmpRes.Failed == 1 && Directory.Exists(notEmptyDir), "non-empty directory rejected on delete");
 
                 string rc1 = Path.Combine(dir, "recycle1.tmp");
                 string rc2 = Path.Combine(dir, "recycle2.tmp");
@@ -217,7 +217,7 @@ namespace Cleaner
                     new ScanItem { Path = rc1, Size = 1 },
                     new ScanItem { Path = rc2, Size = 1 }
                 }, false, null, CancellationToken.None);
-                Check(rcr.Deleted == 2 && !File.Exists(rc1) && !File.Exists(rc2), "hapus ke Recycle Bin berhasil");
+                Check(rcr.Deleted == 2 && !File.Exists(rc1) && !File.Exists(rc2), "move to Recycle Bin succeeded");
             }
             catch (Exception ex)
             {
@@ -229,7 +229,7 @@ namespace Cleaner
                 try { Directory.Delete(dir, true); } catch { }
             }
 
-            Console.WriteLine(failures == 0 ? "SELFTEST PASS" : "SELFTEST FAIL (" + failures + " gagal)");
+            Console.WriteLine(failures == 0 ? "SELFTEST PASS" : "SELFTEST FAIL (" + failures + " failed)");
             return failures == 0 ? 0 : 1;
         }
 
@@ -239,15 +239,15 @@ namespace Cleaner
             var opt = new ScanOptions { Junk = true, Dupes = false, EmptyFolders = true, LargeFiles = true };
             List<Category> cats = ScanEngine.ScanDeep(opt, CancellationToken.None, null);
             sw.Stop();
-            Console.WriteLine("File dipindai: " + ScanEngine.LastWalked);
+            Console.WriteLine("Files scanned: " + ScanEngine.LastWalked);
             for (int i = 0; i < cats.Count; i++)
             {
                 Category c = cats[i];
-                Console.WriteLine(string.Format("{0,-20} {1} item  {2}", c.Name, c.Items.Count, Util.Fmt(c.Size)));
+                Console.WriteLine(string.Format("{0,-20} {1} items  {2}", c.Name, c.Items.Count, Util.Fmt(c.Size)));
                 for (int j = 0; j < Math.Min(3, c.Items.Count); j++)
                     Console.WriteLine("    " + c.Items[j].Path);
             }
-            Console.WriteLine("Waktu: " + sw.Elapsed.TotalSeconds.ToString("0.0") + " detik");
+            Console.WriteLine("Elapsed: " + sw.Elapsed.TotalSeconds.ToString("0.0") + " s");
             return 0;
         }
 
@@ -260,7 +260,7 @@ namespace Cleaner
             for (int i = 0; i < cats.Count; i++)
             {
                 Category c = cats[i];
-                Console.WriteLine(string.Format("{0,-28} {1,8:N0} item  {2,10}", c.Name, c.Items.Count, Util.Fmt(c.Size)));
+                Console.WriteLine(string.Format("{0,-28} {1,8:N0} items  {2,10}", c.Name, c.Items.Count, Util.Fmt(c.Size)));
                 total += c.Size;
             }
             Console.WriteLine(string.Format("{0,-28} {1,8}       {2,10}", "TOTAL", "", Util.Fmt(total)));

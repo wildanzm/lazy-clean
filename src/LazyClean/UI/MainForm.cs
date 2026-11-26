@@ -45,7 +45,7 @@ namespace Cleaner
         private CheckBox chkDeepDup;
         private CheckBox chkDeepEmpty;
         private CheckBox chkDeepLarge;
-        private ListView lvCats;
+        private DataGridView catGrid;
         private DataGridView grid;
         private SplitContainer split;
         private Panel emptyHost;
@@ -68,7 +68,7 @@ namespace Cleaner
 
         public MainForm()
         {
-            Text = "lazy clean";
+            Text = "Lazy Clean";
             Size = new Size(1240, 820);
             MinimumSize = new Size(1040, 700);
             StartPosition = FormStartPosition.CenterScreen;
@@ -86,7 +86,15 @@ namespace Cleaner
 
             Shown += delegate
             {
-                try { split.SplitterDistance = 428; }
+                try
+                {
+                    if (split.Width >= 960)
+                    {
+                        split.Panel1MinSize = 400;
+                        split.Panel2MinSize = 540;
+                    }
+                    split.SplitterDistance = 456;
+                }
                 catch { }
                 RefreshView(false);
                 txtSearch.Focus();
@@ -113,7 +121,7 @@ namespace Cleaner
 
             var title = new Label
             {
-                Text = "lazy clean",
+                Text = "Lazy Clean",
                 Font = Theme.UiFont(16F, FontStyle.Bold),
                 ForeColor = Theme.Body,
                 AutoSize = true,
@@ -146,16 +154,14 @@ namespace Cleaner
                 lblFree.Location = new Point(header.ClientSize.Width - 280, 24);
             };
 
-            var tabs = new TabControl
+            var tabs = new FlatTabs
             {
                 Dock = DockStyle.Fill,
                 Padding = new Point(18, 8),
                 Font = Theme.UiFont(9.5F, FontStyle.Regular),
-                DrawMode = TabDrawMode.OwnerDrawFixed,
                 SizeMode = TabSizeMode.Fixed,
                 ItemSize = new Size(132, 30)
             };
-            tabs.DrawItem += TabsDrawItem;
             tabs.BackColor = Theme.Canvas;
             var pageClean = new TabPage("Clean") { BackColor = Theme.Canvas, Padding = new Padding(12) };
             var pageTools = new TabPage("System tools") { BackColor = Theme.Canvas, Padding = new Padding(12) };
@@ -293,39 +299,118 @@ namespace Cleaner
                 BackColor = Theme.Canvas
             };
 
-            lvCats = new ListView
+            catGrid = new DataGridView
             {
                 Dock = DockStyle.Fill,
-                View = View.Details,
-                FullRowSelect = true,
-                CheckBoxes = true,
-                HideSelection = false,
+                ReadOnly = true,
+                ShowCellToolTips = false,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AllowUserToResizeRows = false,
+                RowHeadersVisible = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
+                EditMode = DataGridViewEditMode.EditProgrammatically,
+                BackgroundColor = Theme.Card,
                 BorderStyle = BorderStyle.None,
-                BackColor = Theme.Card,
-                ForeColor = Theme.Body,
-                HeaderStyle = ColumnHeaderStyle.Nonclickable,
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                EnableHeadersVisualStyles = false,
+                GridColor = Theme.Line,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing,
+                ColumnHeadersHeight = 34,
                 Font = Theme.UiFont(9F, FontStyle.Regular),
-                // A little left padding so the accent bar on the active row sits inside the control
-                // instead of being clipped by its edge.
-                Padding = new Padding(2, 0, 0, 0)
+                RowTemplate = { Height = 28 }
             };
-            lvCats.Columns.Add("Category", 168);
-            lvCats.Columns.Add("Items", 52, HorizontalAlignment.Right);
-            lvCats.Columns.Add("Size", 74, HorizontalAlignment.Right);
-            lvCats.Columns.Add("To delete", 84, HorizontalAlignment.Right);
-            lvCats.OwnerDraw = true;
-            lvCats.DrawColumnHeader += CatDrawHeader;
-            lvCats.DrawItem += CatDrawItem;
-            lvCats.DrawSubItem += CatDrawSubItem;
-            lvCats.ItemChecked += CatsItemChecked;
-            lvCats.SelectedIndexChanged += delegate
+            catGrid.ColumnHeadersDefaultCellStyle.BackColor = Theme.Inset;
+            catGrid.ColumnHeadersDefaultCellStyle.ForeColor = Theme.Muted;
+            catGrid.ColumnHeadersDefaultCellStyle.SelectionBackColor = Theme.Inset;
+            catGrid.ColumnHeadersDefaultCellStyle.SelectionForeColor = Theme.Muted;
+            catGrid.ColumnHeadersDefaultCellStyle.Font = Theme.UiFont(8.5F, FontStyle.Bold);
+            catGrid.DefaultCellStyle.BackColor = Theme.Card;
+            catGrid.DefaultCellStyle.ForeColor = Theme.Body;
+            catGrid.DefaultCellStyle.SelectionBackColor = Theme.AccentSoft;
+            catGrid.DefaultCellStyle.SelectionForeColor = Theme.AccentDeep;
+
+            var catCheck = new DataGridViewCheckBoxColumn
             {
-                ShowCategory(lvCats.SelectedIndices.Count > 0 ? lvCats.SelectedIndices[0] : -1);
+                Width = 38,
+                HeaderText = "",
+                ReadOnly = true,
+                Resizable = DataGridViewTriState.False,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+            catCheck.DefaultCellStyle.BackColor = Theme.Card;
+            catCheck.DefaultCellStyle.SelectionBackColor = Theme.AccentSoft;
+
+            var catName = new DataGridViewTextBoxColumn
+            {
+                HeaderText = "Category",
+                Width = 194,
+                MinimumWidth = 156,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                ReadOnly = true,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+            catName.DefaultCellStyle.Font = Theme.UiFont(9F, FontStyle.Bold);
+            catName.DefaultCellStyle.ForeColor = Theme.Body;
+            catName.DefaultCellStyle.SelectionForeColor = Theme.AccentDeep;
+            catName.DefaultCellStyle.Padding = new Padding(4, 0, 0, 0);
+
+            var catItems = new DataGridViewTextBoxColumn
+            {
+                HeaderText = "Items",
+                Width = 62,
+                MinimumWidth = 54,
+                ReadOnly = true,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+            catItems.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            catItems.DefaultCellStyle.Padding = new Padding(0, 0, 6, 0);
+            catItems.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+            catItems.HeaderCell.Style.Padding = new Padding(0, 0, 6, 0);
+
+            var catSize = new DataGridViewTextBoxColumn
+            {
+                HeaderText = "Size",
+                Width = 74,
+                MinimumWidth = 64,
+                ReadOnly = true,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+            catSize.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            catSize.DefaultCellStyle.Padding = new Padding(0, 0, 6, 0);
+            catSize.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+            catSize.HeaderCell.Style.Padding = new Padding(0, 0, 6, 0);
+
+            var catDel = new DataGridViewTextBoxColumn
+            {
+                HeaderText = "To delete",
+                Width = 88,
+                MinimumWidth = 78,
+                ReadOnly = true,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+            catDel.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            catDel.DefaultCellStyle.Padding = new Padding(0, 0, 6, 0);
+            catDel.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+            catDel.HeaderCell.Style.Padding = new Padding(0, 0, 6, 0);
+
+            catGrid.Columns.AddRange(new DataGridViewColumn[]
+            {
+                catCheck, catName, catItems, catSize, catDel
+            });
+            catGrid.CellPainting += CatGridCellPainting;
+            catGrid.CellMouseDown += CatGridCellMouseDown;
+            catGrid.KeyDown += CatGridKeyDown;
+            catGrid.SelectionChanged += delegate
+            {
+                if (syncing) return;
+                ShowCategory(SelectedCategoryIndex());
                 UpdateNav();
             };
-            var catHost = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Card, Padding = new Padding(8, 4, 4, 4) };
-            catHost.Controls.Add(lvCats);
+
+            var catHost = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Card };
+            catHost.Controls.Add(catGrid);
             split.Panel1.Controls.Add(catHost);
 
             right = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Card };
@@ -443,6 +528,7 @@ namespace Cleaner
             grid.ColumnHeadersDefaultCellStyle.BackColor = Theme.Inset;
             grid.ColumnHeadersDefaultCellStyle.ForeColor = Theme.Muted;
             grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = Theme.Inset;
+            grid.ColumnHeadersDefaultCellStyle.SelectionForeColor = Theme.Muted;
             grid.ColumnHeadersDefaultCellStyle.Font = Theme.UiFont(8.5F, FontStyle.Bold);
             // No header padding: DataGridView subtracts it from the available width, which clipped
             // the "Delete" header. The arrow instead gets its own grab of space in GridCellPainting.
@@ -561,84 +647,93 @@ namespace Cleaner
             UpdateSortGlyphs();
         }
 
-        private void TabsDrawItem(object sender, DrawItemEventArgs e)
+        private sealed class FlatTabs : TabControl
         {
-            var tabs = (TabControl)sender;
-            TabPage page = tabs.TabPages[e.Index];
-            bool active = tabs.SelectedIndex == e.Index;
-            var rect = e.Bounds;
-
-            // Tabs sit on the canvas and the active one lifts to the card colour, with a short
-            // accent rule under it. Everything else stays flat so the tab strip reads as a header.
-            using (var back = new SolidBrush(Theme.Canvas))
-                e.Graphics.FillRectangle(back, rect);
-            if (active)
+            public FlatTabs()
             {
-                var body = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height - 2);
-                using (var lift = new SolidBrush(Theme.Card))
-                    e.Graphics.FillRectangle(lift, body);
-                using (var ink = new SolidBrush(Theme.Accent))
-                    e.Graphics.FillRectangle(ink, body.Left + 12, body.Bottom - 2, body.Width - 24, 2);
+                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                         ControlStyles.DoubleBuffer | ControlStyles.ResizeRedraw, true);
             }
-            TextFormatFlags flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter;
-            TextRenderer.DrawText(e.Graphics, page.Text, Theme.UiFont(9.5F, active ? FontStyle.Bold : FontStyle.Regular),
-                rect, active ? Theme.Body : Theme.Muted, flags);
-        }
 
-        private void CatDrawHeader(object sender, DrawListViewColumnHeaderEventArgs e)
-        {
-            using (var back = new SolidBrush(Theme.Inset))
-                e.Graphics.FillRectangle(back, e.Bounds);
-            using (var line = new Pen(Theme.Line))
-                e.Graphics.DrawLine(line, e.Bounds.Left, e.Bounds.Bottom - 1, e.Bounds.Right, e.Bounds.Bottom - 1);
-            TextFormatFlags flags = TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis;
-            flags |= e.ColumnIndex == 0 ? TextFormatFlags.Left : TextFormatFlags.Right;
-            var rect = e.Bounds;
-            // Right-aligned headers only need a hair of padding; 8px on each side was clipping
-            // the shortest header on the strip.
-            rect.Inflate(e.ColumnIndex == 0 ? -8 : -4, 0);
-            TextRenderer.DrawText(e.Graphics, e.Header.Text, Theme.UiFont(8.5F, FontStyle.Bold), rect, Theme.Muted, flags);
-        }
-
-        // Rows are painted by hand for one reason: the row you are looking at has to be obvious.
-        // ListView's native selection is a system blue that fights the accent, and it disappears
-        // the moment focus moves, which leaves no answer to "which category is on the right".
-        private void CatDrawItem(object sender, DrawListViewItemEventArgs e)
-        {
-            bool active = lvCats.SelectedIndices.Contains(e.ItemIndex);
-
-            using (var fill = new SolidBrush(active ? Theme.AccentSoft : Theme.Card))
-                e.Graphics.FillRectangle(fill, e.Bounds);
-
-            using (var line = new Pen(Theme.Line))
-                e.Graphics.DrawLine(line, e.Bounds.Left, e.Bounds.Bottom - 1, e.Bounds.Right - 1, e.Bounds.Bottom - 1);
-        }
-
-        private void CatDrawSubItem(object sender, DrawListViewSubItemEventArgs e)
-        {
-            bool active = lvCats.SelectedIndices.Contains(e.ItemIndex);
-            Color ink = active ? Theme.AccentDeep : (e.ColumnIndex == 0 ? Theme.Body : Theme.Muted);
-            Font font = Theme.UiFont(9F, e.ColumnIndex == 0 ? FontStyle.Bold : FontStyle.Regular);
-
-            if (active && e.ColumnIndex == 0)
+            protected override void OnPaint(PaintEventArgs e)
             {
-                // The bar lives inside the first cell, not at the control edge, because the ListView
-                // clips anything drawn on its own border and the bar lost its bottom half there.
+                using (var back = new SolidBrush(Theme.Canvas))
+                    e.Graphics.FillRectangle(back, ClientRectangle);
+
+                for (int i = 0; i < TabCount; i++)
+                {
+                    Rectangle rect = GetTabRect(i);
+                    bool active = SelectedIndex == i;
+                    var tabBox = new Rectangle(rect.X, 2, rect.Width, ItemSize.Height);
+                    if (active)
+                    {
+                        using (var lift = new SolidBrush(Theme.Card))
+                            e.Graphics.FillRectangle(lift, tabBox);
+                    }
+                    TextFormatFlags flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter;
+                    TextRenderer.DrawText(e.Graphics, TabPages[i].Text,
+                        Theme.UiFont(9.5F, active ? FontStyle.Bold : FontStyle.Regular),
+                        tabBox, active ? Theme.Body : Theme.Muted, flags);
+                }
+            }
+        }
+
+        private int SelectedCategoryIndex()
+        {
+            if (catGrid.SelectedRows.Count > 0) return catGrid.SelectedRows[0].Index;
+            if (catGrid.CurrentRow != null) return catGrid.CurrentRow.Index;
+            return -1;
+        }
+
+        private void CatGridCellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.ColumnIndex != 0 || e.RowIndex < 0 || e.RowIndex >= categories.Count) return;
+
+            e.Paint(e.CellBounds, DataGridViewPaintParts.Background | DataGridViewPaintParts.SelectionBackground | DataGridViewPaintParts.Border);
+
+            if (catGrid.Rows[e.RowIndex].Selected)
+            {
                 using (var accentBar = new SolidBrush(Theme.Accent))
-                    e.Graphics.FillRectangle(accentBar, e.Bounds.Left + 1, e.Bounds.Top, 3, e.Bounds.Height);
+                    e.Graphics.FillRectangle(accentBar, e.CellBounds.Left, e.CellBounds.Top, 3, Math.Max(0, e.CellBounds.Height - 1));
             }
 
-            TextFormatFlags flags = TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis;
-            flags |= e.ColumnIndex == 0 ? TextFormatFlags.Left : TextFormatFlags.Right;
-            var rect = e.Bounds;
-            rect.Inflate(e.ColumnIndex == 0 ? -8 : -4, 0);
-            // Leave room for the checkbox the ListView draws and for the accent bar.
-            if (e.ColumnIndex == 0)
+            Category c = categories[e.RowIndex];
+            bool all = c.AllChecked;
+            bool partial = !all && c.AnyChecked;
+            var boxBounds = new Rectangle(e.CellBounds.Left + 3, e.CellBounds.Top, Math.Max(14, e.CellBounds.Width - 3), e.CellBounds.Height);
+            PaintCheckBox(e.Graphics, boxBounds, all, false, partial);
+            e.Handled = true;
+        }
+
+        private void CatGridCellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left || e.RowIndex < 0 || e.RowIndex >= categories.Count) return;
+            if (e.ColumnIndex == 0) ToggleCategoryAt(e.RowIndex);
+        }
+
+        private void CatGridKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Space)
             {
-                rect.X += 20;
-                rect.Width -= 4;
+                ToggleCategoryAt(SelectedCategoryIndex());
+                e.Handled = true;
             }
-            TextRenderer.DrawText(e.Graphics, e.SubItem.Text, font, rect, ink, flags);
+        }
+
+        private void ToggleCategoryAt(int idx)
+        {
+            if (syncing || busy || idx < 0 || idx >= categories.Count) return;
+            Category c = categories[idx];
+            bool val = !c.AllChecked;
+            for (int i = 0; i < c.Items.Count; i++)
+            {
+                if (c.Items[i].Keep) continue;
+                c.Items[i].Checked = val;
+            }
+            grid.Invalidate();
+            RefreshCatStates();
+            UpdateFooter();
+            UpdateFilterCount();
         }
 
         private CheckBox DeepCheck(string text, int x, int y)
@@ -700,7 +795,7 @@ namespace Cleaner
         {
             // Grouped by what the task touches, because eight identical buttons gave no hint which
             // one is routine and which one cannot be undone.
-            var top = new Panel { Dock = DockStyle.Top, Height = 246, BackColor = Theme.Canvas };
+            var top = new Panel { Dock = DockStyle.Top, Height = 258, BackColor = Theme.Canvas };
 
             int y = 4;
             y = ToolGroup(top, "Windows component store", y, new ToolSpec[]
@@ -843,7 +938,7 @@ namespace Cleaner
             for (int i = 0; i < specs.Length; i++)
             {
                 ToolSpec spec = specs[i];
-                var cell = new Panel { Width = 326, Height = 54, BackColor = Theme.Canvas, Margin = new Padding(0, 0, 8, 0) };
+                var cell = new Panel { Width = 326, Height = 58, BackColor = Theme.Canvas, Margin = new Padding(0, 0, 8, 0) };
                 Button b = ToolButton(spec.Name, spec.Work);
                 b.Width = 148;
                 b.Height = 32;
@@ -853,7 +948,7 @@ namespace Cleaner
                 {
                     Text = spec.Note,
                     AutoSize = false,
-                    Size = new Size(172, 46),
+                    Size = new Size(172, 52),
                     Location = new Point(154, 2),
                     ForeColor = Theme.Muted,
                     Font = Theme.UiFont(8.5F, FontStyle.Regular)
@@ -863,7 +958,7 @@ namespace Cleaner
                 row.Controls.Add(cell);
             }
             parent.Controls.Add(row);
-            return y + 22 + 54 + 12;
+            return y + 22 + 58 + 12;
         }
 
         private Button ToolButton(string text, EventHandler click)
@@ -964,26 +1059,35 @@ namespace Cleaner
             e.PaintBackground(e.CellBounds, false);
 
             ScanItem it = view[e.RowIndex];
+            PaintCheckBox(e.Graphics, e.CellBounds, it.Checked, it.Keep, false);
+            e.Handled = true;
+        }
+
+        private static void PaintCheckBox(Graphics g, Rectangle cellBounds, bool isChecked, bool locked, bool partial)
+        {
             int size = 14;
             var box = new Rectangle(
-                e.CellBounds.Left + (e.CellBounds.Width - size) / 2,
-                e.CellBounds.Top + (e.CellBounds.Height - size) / 2,
+                cellBounds.Left + (cellBounds.Width - size) / 2,
+                cellBounds.Top + (cellBounds.Height - size) / 2,
                 size, size);
 
-            using (var fill = new SolidBrush(it.Keep ? Theme.Inset : (it.Checked ? Theme.Accent : Theme.Card)))
-                e.Graphics.FillRectangle(fill, box);
-            // Border rather than Line: a checkbox edge is a control boundary and has to clear 3:1.
-            using (var edge = new Pen(it.Keep ? Theme.Border : (it.Checked ? Theme.Accent : Theme.Border)))
-                e.Graphics.DrawRectangle(edge, box);
+            Color fillColor = locked ? Theme.Inset : (isChecked ? Theme.Accent : (partial ? Theme.AccentSoft : Theme.Card));
+            Color borderColor = locked ? Theme.Border : ((isChecked || partial) ? Theme.Accent : Theme.Border);
 
-            if (it.Checked && !it.Keep)
+            using (var fill = new SolidBrush(fillColor))
+                g.FillRectangle(fill, box);
+            // Border rather than Line: a checkbox edge is a control boundary and has to clear 3:1.
+            using (var edge = new Pen(borderColor))
+                g.DrawRectangle(edge, box);
+
+            if (isChecked && !locked)
             {
                 // Drawn by hand: a white tick on the accent fill, readable at 14px.
                 using (var tick = new Pen(Theme.Card, 2F))
                 {
                     tick.StartCap = System.Drawing.Drawing2D.LineCap.Round;
                     tick.EndCap = System.Drawing.Drawing2D.LineCap.Round;
-                    e.Graphics.DrawLines(tick, new Point[]
+                    g.DrawLines(tick, new Point[]
                     {
                         new Point(box.Left + 3, box.Top + 7),
                         new Point(box.Left + 6, box.Top + 10),
@@ -991,14 +1095,18 @@ namespace Cleaner
                     });
                 }
             }
+            else if (partial && !locked)
+            {
+                using (var mark = new SolidBrush(Theme.Accent))
+                    g.FillRectangle(mark, box.Left + 4, box.Top + 4, 6, 6);
+            }
 
-            if (it.Keep)
+            if (locked)
             {
                 // "Kept" is shown as a shape, not a colour alone: a short bar that reads as a lock.
                 using (var lockInk = new SolidBrush(Theme.Quiet))
-                    e.Graphics.FillRectangle(lockInk, box.Left + 4, box.Top + 5, 6, 2);
+                    g.FillRectangle(lockInk, box.Left + 4, box.Top + 5, 6, 2);
             }
-            e.Handled = true;
         }
 
         private void GridCellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
@@ -1294,44 +1402,26 @@ namespace Cleaner
 
         private void StepCategory(int delta)
         {
-            if (lvCats.SelectedIndices.Count == 0) return;
-            int idx = lvCats.SelectedIndices[0] + delta;
-            if (idx < 0 || idx >= categories.Count) return;
-            lvCats.Items[idx].Selected = true;
-            lvCats.Items[idx].Focused = true;
-            lvCats.EnsureVisible(idx);
+            int cur = SelectedCategoryIndex();
+            if (cur < 0) return;
+            int idx = cur + delta;
+            if (idx < 0 || idx >= categories.Count || idx >= catGrid.Rows.Count) return;
+            catGrid.ClearSelection();
+            catGrid.CurrentCell = catGrid.Rows[idx].Cells[1];
+            catGrid.Rows[idx].Selected = true;
         }
 
         private void UpdateNav()
         {
-            if (lvCats.SelectedIndices.Count == 0)
+            int idx = SelectedCategoryIndex();
+            if (idx < 0)
             {
                 btnPrev.Enabled = false;
                 btnNext.Enabled = false;
                 return;
             }
-            int idx = lvCats.SelectedIndices[0];
             btnPrev.Enabled = !busy && idx > 0;
             btnNext.Enabled = !busy && idx < categories.Count - 1;
-        }
-
-        private void CatsItemChecked(object sender, ItemCheckedEventArgs e)
-        {
-            if (syncing) return;
-            int idx = e.Item.Index;
-            if (idx < 0 || idx >= categories.Count) return;
-
-            bool val = e.Item.Checked;
-            Category c = categories[idx];
-            for (int i = 0; i < c.Items.Count; i++)
-            {
-                if (c.Items[i].Keep) continue;
-                c.Items[i].Checked = val;
-            }
-            grid.Invalidate();
-            RefreshCatStates();
-            UpdateFooter();
-            UpdateFilterCount();
         }
 
         private void SetViewChecked(bool value)
@@ -1352,13 +1442,15 @@ namespace Cleaner
             syncing = true;
             try
             {
-                for (int i = 0; i < categories.Count && i < lvCats.Items.Count; i++)
+                for (int i = 0; i < categories.Count && i < catGrid.Rows.Count; i++)
                 {
                     Category c = categories[i];
-                    ListViewItem lvi = lvCats.Items[i];
-                    lvi.SubItems[3].Text = Util.Fmt(c.SelectedSize);
-                    bool all = c.AllChecked;
-                    if (lvi.Checked != all) lvi.Checked = all;
+                    DataGridViewRow row = catGrid.Rows[i];
+                    row.Cells[0].Value = c.AllChecked;
+                    row.Cells[2].Value = c.Items.Count.ToString("N0");
+                    row.Cells[3].Value = Util.Fmt(c.Size);
+                    row.Cells[4].Value = c.SelectedSize > 0 ? Util.Fmt(c.SelectedSize) : "nothing";
+                    catGrid.InvalidateRow(i);
                 }
             }
             finally
@@ -1407,25 +1499,24 @@ namespace Cleaner
             syncing = true;
             try
             {
-                lvCats.BeginUpdate();
-                lvCats.Items.Clear();
+                catGrid.Rows.Clear();
                 for (int i = 0; i < categories.Count; i++)
                 {
                     Category c = categories[i];
-                    var lvi = new ListViewItem(c.Name);
-                    lvi.SubItems.Add(c.Items.Count.ToString("N0"));
-                    lvi.SubItems.Add(Util.Fmt(c.Size));
                     // "To delete" rather than the raw selected size: the number means nothing until
                     // it says what it is, and it is the only column a user can act on.
-                    lvi.SubItems.Add(c.SelectedSize > 0 ? Util.Fmt(c.SelectedSize) : "nothing");
-                    lvi.Checked = c.AllChecked;
-                    lvCats.Items.Add(lvi);
+                    catGrid.Rows.Add(
+                        c.AllChecked,
+                        c.Name,
+                        c.Items.Count.ToString("N0"),
+                        Util.Fmt(c.Size),
+                        c.SelectedSize > 0 ? Util.Fmt(c.SelectedSize) : "nothing");
                 }
-                lvCats.EndUpdate();
-                if (lvCats.Items.Count > 0)
+                if (catGrid.Rows.Count > 0)
                 {
-                    lvCats.Items[0].Selected = true;
-                    lvCats.Items[0].Focused = true;
+                    catGrid.ClearSelection();
+                    catGrid.CurrentCell = catGrid.Rows[0].Cells[1];
+                    catGrid.Rows[0].Selected = true;
                 }
             }
             finally
@@ -1433,6 +1524,7 @@ namespace Cleaner
                 syncing = false;
             }
             ShowCategory(categories.Count > 0 ? 0 : -1);
+            UpdateNav();
         }
 
         private void RebuildCategories()
@@ -1538,7 +1630,7 @@ namespace Cleaner
             btnRefresh.Enabled = !running;
             btnSelectAll.Enabled = !running;
             btnSelectNone.Enabled = !running;
-            lvCats.Enabled = !running;
+            catGrid.Enabled = !running;
             grid.Enabled = !running;
             chkPermanent.Enabled = !running;
             chkDeepJunk.Enabled = !running;
@@ -1863,6 +1955,22 @@ namespace Cleaner
             RebuildCategories();
             Application.DoEvents();
 
+            Check(catGrid.Visible && catGrid.RowCount == 2, "category table shows all expected rows (got " + catGrid.RowCount + ")");
+            Check((catGrid.Rows[0].Cells[1].Value as string) == "All results" &&
+                  (catGrid.Rows[1].Cells[1].Value as string) == "Junk files", "category names remain visible in left table");
+            Check((catGrid.Rows[1].Cells[2].Value as string) == "4" &&
+                  (catGrid.Rows[1].Cells[3].Value as string) == Util.Fmt(1270), "category count and size remain visible");
+            Check(catGrid.Columns[1].Width >= TextRenderer.MeasureText("Windows Error Reporting", catGrid.Columns[1].DefaultCellStyle.Font).Width + 4,
+                "category column fits longest category name without clipping (w=" + catGrid.Columns[1].Width + ")");
+            Check(catGrid.Columns[4].Width >= TextRenderer.MeasureText("To delete", catGrid.ColumnHeadersDefaultCellStyle.Font).Width + 12,
+                "To delete header fits without clipping (w=" + catGrid.Columns[4].Width + ")");
+
+            StepCategory(1);
+            Application.DoEvents();
+            Check(SelectedCategoryIndex() == 1 && btnPrev.Enabled && !btnNext.Enabled, "category navigation updates selection and buttons");
+            StepCategory(-1);
+            Application.DoEvents();
+
             Check(grid.RowCount == 4, "all four rows visible through the virtual grid (got " + grid.RowCount + ")");
             Check(SortActive(SortField.Size, false), "default sort is size, largest first");
             string shownName = grid.Rows[0].Cells[1].Value as string;
@@ -1951,6 +2059,16 @@ namespace Cleaner
             Application.DoEvents();
             Check(lblSelected.Text == "Nothing selected", "clear selection updates the footer (got " + lblSelected.Text + ")");
             Check(lblFreeSpace.Text.Length == 0, "clear selection clears the freed size too");
+            Check((catGrid.Rows[1].Cells[4].Value as string) == "nothing", "left table To delete updates to nothing when unchecked");
+
+            ToggleCategoryAt(1);
+            Application.DoEvents();
+            Check((catGrid.Rows[1].Cells[4].Value as string) == Util.Fmt(1270) &&
+                  (catGrid.Rows[1].Cells[1].Value as string) == "Junk files", "toggling category on updates To delete without hiding row data");
+            ToggleCategoryAt(1);
+            Application.DoEvents();
+            Check((catGrid.Rows[1].Cells[4].Value as string) == "nothing" &&
+                  (catGrid.Rows[1].Cells[1].Value as string) == "Junk files", "toggling category off keeps row text visible");
 
             var ghost = new Category { Name = "Junk files" };
             ghost.Items.Add(new ScanItem

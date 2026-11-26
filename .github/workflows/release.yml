@@ -32,5 +32,5 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag bin\LazyClean.exe bin\SHA256SUMS.txt --clobber
           } else {
-            gh release create $tag bin\LazyClean.exe bin\SHA256SUMS.txt --title "lazy clean $tag" --generate-notes
+            gh release create $tag bin\LazyClean.exe bin\SHA256SUMS.txt --title "Lazy Clean $tag" --generate-notes
           }

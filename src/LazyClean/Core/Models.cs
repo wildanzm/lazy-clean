@@ -75,6 +75,19 @@ namespace Cleaner
                 }
             }
         }
+
+        public bool AnyChecked
+        {
+            get
+            {
+                lock (Items)
+                {
+                    for (int i = 0; i < Items.Count; i++)
+                        if (!Items[i].Keep && Items[i].Checked) return true;
+                    return false;
+                }
+            }
+        }
     }
 
     public class ScanProgress
